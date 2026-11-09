@@ -147,15 +147,15 @@ def alphabeta(board, depth=6):
                 best_score, best_move = value, column
             # TODO 5 (Alpha-Beta): Update the appropriate bound.
             if maximizing:
-                alpha = ...
+                alpha = max(alpha, best_score)
             else:
-                beta = ...
+                beta = min(beta, best_score)
             trace.update(node_id, score=best_score,
                          alpha=alpha if math.isfinite(alpha) else None,
                          beta=beta if math.isfinite(beta) else None)
 
             # TODO 6: Apply the pruning condition.
-            if ...:
+            if alpha >= beta:
                 skipped = moves[index + 1:]
                 if skipped:
                     trace.event("prune", node_id, skipped_moves=skipped,
@@ -220,7 +220,7 @@ def mcts(board, num_simulations=1000, exploration=math.sqrt(2), seed=None):
             # who moved into that child.
             node = max(
                 node.children,
-                key=lambda child: ...,
+                key=lambda child: child.mean_for(_other(node.player_to_move)) + exploration * math.sqrt(log_parent / child.visits),
             )
             trace.event("select", node.trace_id, iteration=iteration)
 
@@ -253,10 +253,15 @@ def mcts(board, num_simulations=1000, exploration=math.sqrt(2), seed=None):
             # TODO 8: Increment the visit count and accumulate reward.
             # A win earns 1, a draw 0.5, and a loss 0.
             # Evaluate from the perspective of the player who entered this node.
-            node.visits += ...
+            node.visits += 1
             previous_player = _other(node.player_to_move)
-            reward = ...
-            node.total_reward += ...
+            if winner == previous_player:
+                reward = 1.0
+            elif winner is None:
+                reward = 0.5
+            else:
+                reward = 0.0
+            node.total_reward += reward
             trace.update(node.trace_id, visits=node.visits,
                          mean_reward=round(node.total_reward / node.visits, 4))
             node = node.parent
