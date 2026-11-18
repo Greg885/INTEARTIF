@@ -21,7 +21,7 @@ from typing import Sequence
 import cairosvg
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.animation import FuncAnimation
+from matplotlib.animation import FuncAnimation, PillowWriter
 from matplotlib.offsetbox import AnnotationBbox, OffsetImage
 from PIL import Image
 
@@ -606,8 +606,11 @@ def visualize_path(
     path: Sequence[State],
     interval: int = 10,
     repeat: bool = False,
+    save_path: str | Path | None = None,
+    show: bool = True,
+    frame_step: int = 1,
 ) -> FuncAnimation:
-    """Animate the trainer following a path.
+    """Animate the trainer following a path and optionally save it as a GIF.
 
     The supplied path is validated before the animation begins.
 
@@ -625,6 +628,14 @@ def visualize_path(
         Delay between frames in milliseconds.
     repeat : bool, default=False
         Whether the animation should restart after reaching the goal.
+    save_path : str or pathlib.Path or None, default=None
+        Destination for an optional GIF export. Parent directories are created
+        if necessary.
+    show : bool, default=True
+        Whether to display the animation interactively.
+    frame_step : int, default=1
+        Number of path positions to skip between frames. The final position is
+        always included.
 
     Returns
     -------
@@ -633,9 +644,15 @@ def visualize_path(
 
     Notes
     -----
-    Store the returned animation in a variable until ``plt.show()`` finishes.
-    Otherwise, Python may garbage-collect it before it is displayed.
+    Store the returned animation in a variable until ``plt.show()`` finishes
+    when displaying it interactively.
     """
+    if interval <= 0:
+        raise ValueError("The frame interval must be greater than zero.")
+
+    if frame_step < 1:
+        raise ValueError("frame_step must be greater than or equal to 1.")
+
     validate_path(
         game_map,
         path,
@@ -678,8 +695,13 @@ def visualize_path(
         pad=12,
     )
 
+    frame_indices = list(range(0, len(path), frame_step))
+    if frame_indices[-1] != len(path) - 1:
+        frame_indices.append(len(path) - 1)
+
     def update(frame_index: int):
-        state = path[frame_index]
+        path_index = frame_indices[frame_index]
+        state = path[path_index]
         row, column = state
 
         trainer_box.xybox = (
@@ -691,30 +713,46 @@ def visualize_path(
             row + 0.5,
         )
 
-        visited_x.append(column + 0.5)
-        visited_y.append(row + 0.5)
+        visited_x[:] = [
+            position[1] + 0.5 for position in path[:path_index + 1]
+        ]
+        visited_y[:] = [
+            position[0] + 0.5 for position in path[:path_index + 1]
+        ]
 
         path_line.set_data(
             visited_x,
-            visited_y
+            visited_y,
         )
         path_line.set_color("red")
 
-        status_text.set_text(f"Step {frame_index}/{len(path) - 1} — state {state}")
+        status_text.set_text(f"Step {path_index}/{len(path) - 1} — state {state}")
 
         return trainer_box, path_line, status_text
 
     animation = FuncAnimation(
         figure,
         update,
-        frames=len(path),
+        frames=len(frame_indices),
         interval=interval,
         repeat=repeat,
         blit=False,
     )
 
     figure.tight_layout()
-    plt.show()
+
+    if save_path is not None:
+        output_path = Path(save_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        animation.save(
+            output_path,
+            writer=PillowWriter(fps=max(1, round(1000 / interval))),
+        )
+
+    if show:
+        plt.show()
+    else:
+        plt.close(figure)
 
     return animation
 

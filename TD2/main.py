@@ -1,7 +1,8 @@
 """Compare Dijkstra and A* on a difficult random Pokémon map."""
 
+from pathlib import Path
+
 from pokemon_game import (
-    draw_map,
     generate_hard_map,
     visualize_path,
 )
@@ -16,28 +17,23 @@ from search import (
 # Use None to obtain a different random map each time.
 MAP_SEED = 353
 RANDOM_PATH_SEED = 10
+OUTPUT_DIRECTORY = Path(__file__).resolve().parent / "animations"
+FRAME_STEP = 3
 
 
 def main() -> None:
     """Generate one map and compare Dijkstra with A*."""
     game_map, start, goal = generate_hard_map(
-        rows=10,
-        columns=10,
+        rows=100,
+        columns=100,
         tree_probability=0.15,
-        rock_probability=0.2,
+        rock_probability=0.5,
         minimum_distance=9,
         seed=MAP_SEED,
     )
 
     print(f"Initial state: {start}")
     print(f"Goal state:    {goal}")
-
-    # Display the generated environment.
-    draw_map(
-        game_map,
-        start,
-        goal,
-    )
 
     # ---------------------------------------------------------------
     # Random valid path demonstration
@@ -66,11 +62,15 @@ def main() -> None:
         start,
         goal,
         random_path,
-        interval=2,
+        interval=500,
         repeat=False,
+        save_path=OUTPUT_DIRECTORY / "random_path.gif",
+        show=False,
+        frame_step=FRAME_STEP,
     )
 
     _ = random_animation
+    print(f"GIF saved: {OUTPUT_DIRECTORY / 'random_path.gif'}")
 
     # ---------------------------------------------------------------
     # Dijkstra
@@ -99,11 +99,15 @@ def main() -> None:
         start,
         goal,
         dijkstra_path,
-        interval=2,
+        interval=100,
         repeat=False,
+        save_path=OUTPUT_DIRECTORY / "dijkstra.gif",
+        show=False,
+        frame_step=FRAME_STEP,
     )
 
     _ = dijkstra_animation
+    print(f"GIF saved: {OUTPUT_DIRECTORY / 'dijkstra.gif'}")
 
     # ---------------------------------------------------------------
     # A*
@@ -132,11 +136,15 @@ def main() -> None:
         start,
         goal,
         astar_path,
-        interval=2,
+        interval=100,
         repeat=False,
+        save_path=OUTPUT_DIRECTORY / "a_star.gif",
+        show=False,
+        frame_step=FRAME_STEP,
     )
 
     _ = astar_animation
+    print(f"GIF saved: {OUTPUT_DIRECTORY / 'a_star.gif'}")
 
     # ---------------------------------------------------------------
     # Comparison
